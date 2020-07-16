@@ -12,39 +12,72 @@
 
 template<char C>
 class myString : public std::string{
-    std::istream& operator>>(std::istream& in){
-        std::getline(in,*this,C);
+    friend std::istream& operator>>(std::istream& in, myString<C>& item){
+        std::getline(in,item,C);
         return in;
     }
+
+
+    /* APARENTEMENTE LOS OPERADORES << Y >> DEBEN SER DECLARADOS COMO FUNCIONES GLOBALES... https://www.geeksforgeeks.org/overloading-stream-insertion-operators-c/ 
+    En C ++, el operador de inserción de flujo "<<" se usa para la salida y el operador de extracción ">>" se usa para la entrada.
+
+Debemos saber lo siguiente antes de comenzar a sobrecargar estos operadores.
+1) cout es un objeto de la clase ostream y cin es un objeto de la clase istream
+2) Estos operadores deben sobrecargarse como una función global. Y si queremos permitirles acceder a los datos privados de los miembros de la clase, 
+debemos hacerlos friends.
+
+¿Por qué estos operadores deben sobrecargarse como globales?
+En la sobrecarga del operador, si un operador se sobrecarga como miembro, debe ser un miembro del objeto en el lado izquierdo del operador. Por ejemplo, 
+considere la declaración "ob1 + ob2" (deje que ob1 y ob2 sean objetos de dos clases diferentes). Para hacer que esta declaración se compile, debemos sobrecargar "+" 
+en la clase de "ob1" o hacer que "+" sea una función global.
+Los operadores ‘<< 'y' >> 'se llaman como' cout << ob1 'y' cin >> ob1 '. Entonces, si queremos convertirlos en un método miembro, entonces deben ser miembros de 
+las clases ostream e istream, lo cual no es una buena opción la mayor parte del tiempo. Por lo tanto, estos operadores están sobrecargados como funciones globales 
+con dos parámetros, cout y objeto de clase definida por el usuario.
+
+cin >> obj, significa operator<<(cin,obj), el lado izquierdo es cin, y sobrecargar >>(obj1) no vale la pena... ni es tan simple ;)
+
+    // ESTO NO FUNCIONA    
+    // std::istream& operator>>(std::istream& in){
+    //     std::getline(in,*this,C);
+    //     return in;
+    // }
+*/
 };
+
+// template<char C>
+// std::istream& operator>>(std::istream& in, myString<C>& token){
+//     std::getline(in,token,C);
+//     return in;
+// }
 
 struct cheque{
     cheque(std::string linea){
         std::istringstream in(linea);
-        std::string token;
-        std::getline(in,token,'|');
-        folio = std::stoi(token);
-        std::getline(in,token,'|');
-        importe = std::stod(token);
+        std::vector<std::string> item;
+        std::copy(std::istream_iterator<myString<'|'>>(in),std::istream_iterator<myString<'|'>>(), std::back_inserter(item));
+        folio = std::stoi(item.at(0));
+        importe = std::stod(item.at(1));
     }
     int folio;
     double importe;
 };
+
 
 std::ostream& operator<<(std::ostream& out,cheque const& CH){
     out << CH.folio << "|" << CH.importe;
     return out;
 }
 
+
 /* funcion para cargar la lista de cheques en un container*/
  template<typename T, typename container = std::vector<T>>
-container& loadListaCheques(const char* filename){
+container loadListaCheques(const char* filename){
     typename container cont;
     std::ifstream File(filename);
     std::vector<std::string> lineas;
     std::copy(std::istream_iterator<std::string>(File),std::istream_iterator<std::string>{},std::back_inserter(lineas));
     for (size_t i = 0; i < lineas.size(); i++){
-        cont.emplace_back(cheque(lineas.at(i)));
+        cont.emplace_back(T{lineas.at(i)});
     }
     return cont;
 }
@@ -68,7 +101,7 @@ int main(){
 	while(FILE *file = fopen(Archivo.c_str(), "r")){
 		consecutivo+=1;
 		nombreArchivo.str("");
-		nombreArchivo << "C:\\Pagos\\00110149" << briefdate.str() << std::setw(3) << std::setfill('0') << consecutivo << ".CHP";
+		nombreArchivo << "archivosParaTransmitir\\00110149" << briefdate.str() << std::setw(3) << std::setfill('0') << consecutivo << ".CHP";
 		Archivo = nombreArchivo.str();
 		fclose(file);
 	}
